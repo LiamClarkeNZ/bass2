@@ -89,3 +89,100 @@ class TestQuoteHandling:
         assert b'\\x22' in result  # double quote
         assert b'\\x7b' in result  # {
         assert b'\\x7d' in result  # }
+
+
+class TestIgnored:
+    def test_pwd_not_ignored(self):
+        assert bass.ignored(b'PWD') is False
+
+    def test_fish_readonly_ignored(self):
+        assert bass.ignored(b'SHLVL') is True
+        assert bass.ignored(b'fish_pid') is True
+
+    def test_ps1_ignored(self):
+        assert bass.ignored(b'PS1') is True
+
+    def test_bash_func_ignored(self):
+        assert bass.ignored(b'BASH_FUNC_foo%%') is True
+
+    def test_percent_prefix_ignored(self):
+        assert bass.ignored(b'%something') is True
+
+    def test_normal_var_not_ignored(self):
+        assert bass.ignored(b'HOME') is False
+        assert bass.ignored(b'MY_CUSTOM_VAR') is False
+
+
+class TestComment:
+    def test_single_line(self):
+        result = bass.comment(b'hello')
+        assert result == b'# hello'
+
+    def test_multi_line(self):
+        result = bass.comment(b'line1\nline2')
+        assert result == b'# line1\n# line2'
+
+
+class TestLoadEnv:
+    def test_simple_env(self):
+        result = bass.load_env('{"HOME": "/home/user", "PATH": "/usr/bin"}')
+        assert result == {b'HOME': b'/home/user', b'PATH': b'/usr/bin'}
+
+    def test_empty_env(self):
+        result = bass.load_env('{}')
+        assert result == {}
+
+    def test_unicode_value(self):
+        result = bass.load_env('{"LANG": "en_US.UTF-8"}')
+        assert result[b'LANG'] == b'en_US.UTF-8'
+
+
+class TestLoadState:
+    def test_empty_state(self):
+        bash_state, function_source = bass.load_state(b'')
+        assert bash_state == []
+        assert function_source == b''
+
+    def test_alias_only(self):
+        state = b"alias ll='ls -la'\nalias grep='grep --color'"
+        bash_state, function_source = bass.load_state(state)
+        assert len(bash_state) == 2
+        assert function_source == b''
+
+    def test_skips_exported_vars(self):
+        state = b"declare -x HOME='/home/user'\nalias ll='ls -la'"
+        bash_state, function_source = bass.load_state(state)
+        assert len(bash_state) == 1
+        assert bash_state[0] == b"alias ll='ls -la'"
+
+    def test_skips_readonly_bash_vars(self):
+        state = b"declare -r BASHOPTS='checkwinsize'\nalias ll='ls -la'"
+        bash_state, function_source = bass.load_state(state)
+        assert len(bash_state) == 1
+
+
+class TestParseFunctions:
+    def test_function_declaration(self):
+        state = [b"declare -f my_func"]
+        result = bass.parse_functions(state)
+        assert result == {b"my_func"}
+
+    def test_non_function_declare_ignored(self):
+        state = [b"declare -i counter"]
+        result = bass.parse_functions(state)
+        assert result == set()
+
+    def test_malformed_declare(self):
+        state = [b"declare"]
+        result = bass.parse_functions(state)
+        assert result == set()
+
+    def test_mixed_state(self):
+        state = [
+            b"alias ll='ls -la'",
+            b"declare -f func1",
+            b"declare -x HOME='/home/user'",
+            b"declare -f func2",
+        ]
+        result = bass.parse_functions(state)
+        assert result == {b"func1", b"func2"}
