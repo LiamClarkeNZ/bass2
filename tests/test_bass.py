@@ -57,3 +57,26 @@ class TestParseAliases:
         ]
         result = bass.parse_aliases(state)
         assert result == {b"grep": b"'grep --color=auto'"}
+
+
+class TestEscape:
+    def test_simple_string(self):
+        result = bass.escape(b'hello')
+        assert result == b'\\x68\\x65\\x6c\\x6c\\x6f'
+
+    def test_newline(self):
+        """Issue #103: newlines must not be mangled."""
+        result = bass.escape(b'line1\nline2')
+        assert b'\\x0a' in result
+
+    def test_dollar_sign(self):
+        result = bass.escape(b'$HOME')
+        assert b'\\x24' in result
+
+    def test_single_quote(self):
+        result = bass.escape(b"it's")
+        assert b'\\x27' in result
+
+    def test_empty_string(self):
+        result = bass.escape(b'')
+        assert result == b''
