@@ -67,7 +67,7 @@ bass -d export X=3
 
 - Python 3.10+
 - fish shell
-- bash
+- bash (4+ recommended — env vars and aliases work on bash 3.2, but function capture requires bash 4+. macOS ships bash 3.2; install a newer version with `brew install bash`)
 
 ## Development
 
