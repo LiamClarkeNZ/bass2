@@ -125,7 +125,7 @@ def gen_script():
     env_reader = "%s -c 'import os,json; print(json.dumps(dict(os.environ)))'" % (sys.executable)
 
     state_save_r, state_save_w = os.pipe()
-    command = 'source "{state_file}"; __bass_cmd="$@"; shift $#; eval "$__bass_cmd" {state_save}>&- && {{ {env_reader}; alias -p; declare -p; declare -F; complete -p; declare -f; }} >&{state_save}'.format(
+    command = 'source "{state_file}"; if [ $# -eq 0 ]; then __bass_cmd=""; elif [ $# -eq 1 ]; then __bass_cmd="$1"; else __bass_cmd="$(printf "%q " "$@")"; fi; shift $#; eval "$__bass_cmd" {state_save}>&- && {{ {env_reader}; alias -p; declare -p; declare -F; complete -p; declare -f; }} >&{state_save}'.format(
         env_reader=env_reader,
         state_file=state_file,
         state_save=state_save_w

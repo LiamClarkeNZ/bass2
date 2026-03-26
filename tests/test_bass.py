@@ -80,3 +80,12 @@ class TestEscape:
     def test_empty_string(self):
         result = bass.escape(b'')
         assert result == b''
+
+
+class TestQuoteHandling:
+    def test_json_string_in_escape(self):
+        """Issue #105: quotes should be preserved in escaped output."""
+        result = bass.escape(b'{"key": "value"}')
+        assert b'\\x22' in result  # double quote
+        assert b'\\x7b' in result  # {
+        assert b'\\x7d' in result  # }
