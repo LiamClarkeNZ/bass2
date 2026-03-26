@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install pytest
-      - run: pytest -v
+      - run: make test-python
 
   fish-integration:
     strategy:
@@ -39,4 +39,4 @@ jobs:
             brew install fish
           fi
       - name: Run fish integration tests
-        run: fish test/test_bass.fish
+        run: make test-fish

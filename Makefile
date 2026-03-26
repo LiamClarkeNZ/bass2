@@ -10,10 +10,20 @@ uninstall:
 	rm -f ~/.config/fish/functions/__bass.py
 	rm -f ~/.config/fish/functions/bass.fish
 
-test:
+test-python:
+	pytest tests/ -v
+
+test-fish:
 	fish test/test_bass.fish
 	fish test/test_dollar_on_output.fish
 	fish test/test_trailing_semicolon.fish
 	fish test/test_non_zero_returncode.fish
+	fish test/test_alias.fish
+	fish test/test_function_capture.fish
+	fish test/test_newline_env.fish
+	fish test/test_quotes.fish
+	fish test/test_virtualenv_compat.fish
 
-.PHONY: test
+test: test-python test-fish
+
+.PHONY: test test-python test-fish
