@@ -17,7 +17,7 @@ function bass
   else
     set python python
   end
-  command $python -u -sS (dirname (status -f))/__bass.py $__bass_state_file $bash_args 3>$script_file
+  command $python -u (dirname (status -f))/__bass.py $__bass_state_file $bash_args 3>$script_file
   set -l bass_status $status
   if test $bass_status -ne 0
     return $bass_status
