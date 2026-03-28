@@ -40,3 +40,12 @@ jobs:
           fi
       - name: Run fish integration tests
         run: make test-fish
+
+  smoke-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build smoke test image
+        run: docker build -f test/smoke/Dockerfile -t bass2-smoke .
+      - name: Run smoke tests
+        run: docker run --rm bass2-smoke
