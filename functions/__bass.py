@@ -197,8 +197,16 @@ def gen_script():
             continue
         # Issue #91: fish uses $argv, not $*
         v = v.replace(b'$*', b'$argv')
-        # Escape alias name so special chars like ? aren't treated as fish globs
-        script_lines.append(b'alias %s %s' % (escape(k), v))
+        # Strip surrounding quotes from value for function body
+        v_stripped = v
+        if v_stripped.startswith(b"'") and v_stripped.endswith(b"'"):
+            v_stripped = v_stripped[1:-1]
+        # Use raw function definition to avoid fish's alias builtin
+        # mangling names with glob chars like ? or *
+        script_lines.append(
+            b"function %s --wraps %s --description 'alias %s=%s'; %s $argv; end"
+            % (escape(k), v, k, v_stripped, v_stripped)
+        )
 
     for alias in set(old_aliases.keys()) - set(new_aliases.keys()):
         script_lines.append(comment(b'removing alias %s' % alias))
