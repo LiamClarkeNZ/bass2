@@ -134,13 +134,14 @@ def gen_script():
     )
     args = [BASH, '--norc', '--noprofile', '-c', command, 'bass'] + sys.argv[2:]
     p = subprocess.Popen(args)
-    if p.wait() != 0:
+    try:
+        if p.wait() != 0:
+            raise subprocess.CalledProcessError(p.returncode, p.args)
+        with open(state_tmp_path, 'rb') as f:
+            new_env = f.readline()
+            new_bash_state = f.read()
+    finally:
         os.unlink(state_tmp_path)
-        raise subprocess.CalledProcessError(p.returncode, p.args)
-    with open(state_tmp_path, 'rb') as f:
-        new_env = f.readline()
-        new_bash_state = f.read()
-    os.unlink(state_tmp_path)
 
     new_env = load_env(new_env)
     old_bash_state, _ = load_state(old_bash_state)
