@@ -58,6 +58,12 @@ class TestParseAliases:
         result = bass.parse_aliases(state)
         assert result == {b"grep": b"'grep --color=auto'"}
 
+    def test_dollar_star_preserved_in_parse(self):
+        """Issue #91: $* in alias values should be captured (conversion happens later)."""
+        state = [b"alias testing='ls $* -l'"]
+        result = bass.parse_aliases(state)
+        assert result == {b"testing": b"'ls $* -l'"}
+
 
 class TestEscape:
     def test_simple_string(self):
