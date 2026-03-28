@@ -23,6 +23,9 @@ test-fish:
 	fish test/test_newline_env.fish
 	fish test/test_quotes.fish
 	fish test/test_virtualenv_compat.fish
+	fish test/test_alias_dollar_star.fish
+	fish test/test_slashed_path_perf.fish
+	fish test/test_large_export.fish
 
 test: test-python test-fish
 

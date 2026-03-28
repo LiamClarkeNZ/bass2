@@ -10,12 +10,12 @@ import os
 import signal
 import subprocess
 import sys
+import tempfile
 
 
 BASH = 'bash'
 
 SCRIPT_FD = 3
-STATE_LOAD_FD = 4
 
 FISH_READONLY = [
     b'PWD', b'SHLVL', b'history', b'pipestatus', b'status', b'version',
@@ -124,20 +124,23 @@ def gen_script():
     # deal with multi-line environment variables (and other odd cases).
     env_reader = "%s -c 'import os,json; print(json.dumps(dict(os.environ)))'" % (sys.executable)
 
-    state_save_r, state_save_w = os.pipe()
-    command = 'source "{state_file}" 2>/dev/null; if [ $# -eq 0 ]; then __bass_cmd=""; elif [ $# -eq 1 ]; then __bass_cmd="$1"; else __bass_cmd="$(printf "%q " "$@")"; fi; shift $#; eval "$__bass_cmd" {state_save}>&- && {{ {env_reader}; alias -p; declare -p; declare -F; complete -p; declare -f; }} >&{state_save}'.format(
+    state_tmp = tempfile.NamedTemporaryFile(delete=False)
+    state_tmp_path = state_tmp.name
+    state_tmp.close()
+    command = 'source "{state_file}" 2>/dev/null; if [ $# -eq 0 ]; then __bass_cmd=""; elif [ $# -eq 1 ]; then __bass_cmd="$1"; else __bass_cmd="$(printf "%q " "$@")"; fi; shift $#; set -f; eval "$__bass_cmd" && {{ {env_reader}; alias -p; declare -p; declare -F; complete -p; declare -f; }} > "{state_tmp}"'.format(
         env_reader=env_reader,
         state_file=state_file,
-        state_save=state_save_w
+        state_tmp=state_tmp_path
     )
     args = [BASH, '--norc', '--noprofile', '-c', command, 'bass'] + sys.argv[2:]
-    p = subprocess.Popen(args, pass_fds=[state_save_w])
-    os.close(state_save_w)
-    with os.fdopen(state_save_r, 'rb') as f:
+    p = subprocess.Popen(args)
+    if p.wait() != 0:
+        os.unlink(state_tmp_path)
+        raise subprocess.CalledProcessError(p.returncode, p.args)
+    with open(state_tmp_path, 'rb') as f:
         new_env = f.readline()
         new_bash_state = f.read()
-    if p.wait() != 0:
-        raise subprocess.CalledProcessError(p.returncode, p.args)
+    os.unlink(state_tmp_path)
 
     new_env = load_env(new_env)
     old_bash_state, _ = load_state(old_bash_state)
@@ -191,6 +194,8 @@ def gen_script():
             script_lines.append(comment(b'updating alias %s=%s -> %s' % (k, v1, v)))
         else:
             continue
+        # Issue #91: fish uses $argv, not $*
+        v = v.replace(b'$*', b'$argv')
         script_lines.append(b'alias %s %s' % (k, v))
 
     for alias in set(old_aliases.keys()) - set(new_aliases.keys()):
